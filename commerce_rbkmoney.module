@@ -229,7 +229,9 @@ function commerce_rbkmoney_redirect_form($form, &$form_state, $order, $payment_m
       drupal_goto('cart');
     }
 
-    $_SESSION['invoiceID'] = $json_encode['id'];
+    $invoiceId = $json_encode['id'];
+
+    $_SESSION['invoiceID'] = $invoiceId;
   } else {
     $invoiceId = $_SESSION['invoiceID'];
   }
