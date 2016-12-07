@@ -224,9 +224,12 @@ function commerce_rbkmoney_redirect_form($form, &$form_state, $order, $payment_m
     $response = create_invoice($order);
     $json_encode = drupal_json_decode($response['body']);
 
-    $invoiceId = !empty($json_encode['id']) ? $json_encode['id'] : '';
+    if (empty($json_encode['id'])) {
+      drupal_set_message(t("Error create invoice"), 'error');
+      drupal_goto('cart');
+    }
 
-    $_SESSION['invoiceID'] = $invoiceId;
+    $_SESSION['invoiceID'] = $json_encode['id'];
   } else {
     $invoiceId = $_SESSION['invoiceID'];
   }
