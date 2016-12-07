@@ -81,8 +81,9 @@ function commerce_rbkmoney_commerce_payment_method_info()
     'title' => t(COMPANY_NAME),
     // The description of the payment method. Optional.
     'description' => t('Payment via ' . COMPANY_NAME . ' payment system'),
-    // Can the administrator add this payment method for
-    // completed the order. Optional. Defaults to TRUE.
+    // TRUE or FALSE indicating whether or not payments can be processed
+    // via this payment method through the administrative payment
+    // terminal on an order’s Payment tab Optional. Defaults to TRUE.
     'terminal' => FALSE,
     // Whether the buyer to leave the website for payment by this method.
     // Optional. Defaults to FALSE.
@@ -166,7 +167,7 @@ function commerce_rbkmoney_config()
     '#type' => 'textfield',
     '#title' => t('Common API URL'),
     '#default_value' => COMMON_API_URL,
-    '#description' => t('Default: "!action"', ['!action' => url('http://capi.service.consul:8080/v1/')]),
+    '#description' => t('Common API URL http://host:port/v1/'),
     '#required' => true,
   ];
 
@@ -382,7 +383,7 @@ function create_invoice($order)
       "module" => MODULE_NAME,
       "order_id" => $order->order_id,
     ],
-    'dueDate' => date("Y-m-d\TH:i:s\Z", strtotime("+1 days")),
+    'dueDate' => date("Y-m-d\TH:i:s\Z", strtotime(CREATE_INVOICE_DUE_DATE)),
     'currency' => $currency_code,
     'product' => $order->order_id,
     'description' => "",

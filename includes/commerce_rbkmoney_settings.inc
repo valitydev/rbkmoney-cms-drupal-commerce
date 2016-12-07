@@ -27,3 +27,5 @@ define('PATH_IMG_LOGO', BASE_PATH_MODULE . '/images/rbkmoney.png');
 define('PATH_IMG_LOGO_PAYMENT_FORM', BASE_URL . BASE_PATH_MODULE . '/images/logo_360.png');
 
 define('DEFAULT_CURRENCY', 'RUB');
+
+define('CREATE_INVOICE_DUE_DATE', '+1 days');
