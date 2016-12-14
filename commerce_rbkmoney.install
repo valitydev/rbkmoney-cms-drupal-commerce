@@ -1,0 +1,22 @@
+<?php
+
+/**
+ * @file
+ * Uninstall function for the commerce_rbkmoney module.
+ */
+
+/**
+ * Implements hook_uninstall().
+ */
+function commerce_rbkmoney_uninstall() {
+  variable_del('commerce_rbkmoney_shop_id');
+  variable_del('commerce_rbkmoney_token');
+  variable_del('commerce_rbkmoney_payframe_url');
+  variable_del('commerce_rbkmoney_capi_url');
+  variable_del('commerce_rbkmoney_currency');
+  variable_del('commerce_rbkmoney_path_logo');
+  variable_del('commerce_rbkmoney_color_form');
+  variable_del('commerce_rbkmoney_company_name');
+  variable_del('commerce_rbkmoney_cds_token');
+  variable_del('commerce_rbkmoney_log');
+}

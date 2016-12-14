@@ -1,0 +1,466 @@
+<?php
+
+module_load_include('inc', 'commerce_rbkmoney', 'includes/commerce_rbkmoney_settings');
+
+/**
+ * Implements hook_permission().
+ */
+function commerce_rbkmoney_permission()
+{
+  return [
+    'administer commerce_rbkmoney' => [
+      'title' => t('Administer Commerce ' . COMPANY_NAME),
+      'description' => t('Access the Commerce ' . COMPANY_NAME . ' settings page'),
+    ],
+  ];
+}
+
+/**
+ * Implements hook_menu().
+ */
+function commerce_rbkmoney_menu()
+{
+  $items['admin/commerce/config/rbkmoney'] = [
+    'title' => 'RBKmoney configuration',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => ['commerce_rbkmoney_config'],
+    'access arguments' => ['administer commerce_rbkmoney'],
+    'type' => MENU_NORMAL_ITEM,
+  ];
+
+  $items['commerce/rbkmoney/response'] = [
+    'page callback' => 'commerce_rbkmoney_response',
+    'access callback' => TRUE,
+    'access arguments' => ['access content'],
+    'type' => MENU_CALLBACK,
+  ];
+
+  $items['commerce/rbkmoney/form/init'] = [
+    'title' => 'Init payment',
+    'page callback' => 'commerce_rbkmoney_init_form_info',
+    'access arguments' => ['access content'],
+    'type' => MENU_CALLBACK,
+    'file' => 'includes/commerce_rbkmoney_init_form.pages.inc',
+  ];
+
+  $items['commerce/rbkmoney/status'] = [
+    'title' => 'Status',
+    'page callback' => 'commerce_rbkmoney_status_info',
+    'access arguments' => ['access content'],
+    'type' => MENU_CALLBACK,
+    'file' => 'includes/commerce_rbkmoney_status.pages.inc',
+  ];
+
+  $items['commerce/rbkmoney/success'] = [
+    'title' => 'Internal Data',
+    'page callback' => 'commerce_rbkmoney_payment_end',
+    'page arguments' => ['success'],
+    'access arguments' => ['access content'],
+    'type' => MENU_CALLBACK,
+  ];
+  $items['commerce/rbkmoney/fail'] = [
+    'title' => 'Internal Data',
+    'page callback' => 'commerce_rbkmoney_payment_end',
+    'page arguments' => ['fail'],
+    'access arguments' => ['access content'],
+    'type' => MENU_CALLBACK,
+  ];
+
+  return $items;
+}
+
+/**
+ * Implements hook_commerce_payment_method_info().
+ */
+function commerce_rbkmoney_commerce_payment_method_info()
+{
+  $payment_methods = [];
+  // The system name of the payment method.
+  $payment_methods[MODULE_NAME] = [
+    // Name of payment method to display in the admin area.
+    'title' => t(COMPANY_NAME),
+    // The description of the payment method. Optional.
+    'description' => t('Payment via ' . COMPANY_NAME . ' payment system'),
+    // TRUE or FALSE indicating whether or not payments can be processed
+    // via this payment method through the administrative payment
+    // terminal on an order’s Payment tab Optional. Defaults to TRUE.
+    'terminal' => FALSE,
+    // Whether the buyer to leave the website for payment by this method.
+    // Optional. Defaults to FALSE.
+    'offsite' => TRUE,
+    // As a payment method when you enable the module: TRUE — enabled, FALSE — disabled
+    // (the default). Optional.
+    'active' => TRUE,
+    // Automatically redirect to third party website for payment in this way.
+    // Optional. Defaults to FALSE.
+    'offsite_autoredirect' => FALSE,
+  ];
+
+  return $payment_methods;
+}
+
+/**
+ * Payment method settings form.
+ */
+function commerce_rbkmoney_config()
+{
+  $form['commerce_rbkmoney_help'] = [
+    '#markup' => t(l(COMPANY_NAME . ' API link', 'http://www.rbkmoney.com/ru/manual',
+      ['attributes' =>
+        ['target' => '_blank']
+      ])),
+  ];
+
+  $form['commerce_rbkmoney_shop_id'] = [
+    '#type' => 'textfield',
+    '#title' => t('Shop ID for a create invoice'),
+    '#default_value' => variable_get('commerce_rbkmoney_shop_id', ''),
+    '#description' => t("Merchant ShopID of your site"),
+    '#required' => TRUE,
+  ];
+
+  /**
+   * For the normal display width in TEXTAREA,
+   * you need to add the styles:
+   * textarea.form-textarea { width: 370px; }
+   * by default, the width 100%
+   */
+  $form['commerce_rbkmoney_cds_token'] = [
+    '#type' => 'textarea',
+    '#title' => t('CDS Token for a request'),
+    '#default_value' => MERCHANT_CDS_TOKEN,
+    '#description' => t("Merchant Token of your site"),
+    '#rows' => 10,
+    '#cols' => 10,
+    '#resizable' => FALSE,
+    '#weight' => 10,
+    '#required' => TRUE,
+  ];
+
+  /**
+   * For the normal display width in TEXTAREA,
+   * you need to add the styles:
+   * textarea.form-textarea { width: 370px; }
+   * by default, the width 100%
+   */
+  $form['commerce_rbkmoney_token'] = [
+    '#type' => 'textarea',
+    '#title' => t('Token for a request'),
+    '#default_value' => MERCHANT_TOKEN,
+    '#description' => t("Merchant Token of your site"),
+    '#rows' => 10,
+    '#cols' => 10,
+    '#resizable' => FALSE,
+    '#weight' => 10,
+    '#required' => TRUE,
+  ];
+
+  $form['commerce_rbkmoney_payframe_url'] = [
+    '#type' => 'textfield',
+    '#title' => t('Payframe URL'),
+    '#default_value' => PATH_JS_PAYFRAME,
+    '#description' => t('Payframe URL http://host:port/payframe/payframe.js'),
+    '#required' => true,
+  ];
+
+  $form['commerce_rbkmoney_capi_url'] = [
+    '#type' => 'textfield',
+    '#title' => t('Common API URL'),
+    '#default_value' => COMMON_API_URL,
+    '#description' => t('Common API URL http://host:port/v1/'),
+    '#required' => true,
+  ];
+
+  $form['commerce_rbkmoney_path_logo'] = [
+    '#type' => 'textfield',
+    '#title' => t('Path to Logo'),
+    '#default_value' => variable_get('commerce_rbkmoney_path_logo', PATH_IMG_LOGO_PAYMENT_FORM),
+    '#description' => t("Logo your payment form"),
+    '#required' => TRUE,
+  ];
+
+  $form['commerce_rbkmoney_color_form'] = [
+    '#type' => 'textfield',
+    '#title' => t('Color payment form'),
+    '#default_value' => variable_get('commerce_rbkmoney_color_form', 'rgb(39, 181, 63)'),
+    '#description' => t("Color your payment form"),
+    '#required' => TRUE,
+  ];
+
+  $form['commerce_rbkmoney_company_name'] = [
+    '#type' => 'textfield',
+    '#title' => t('Company name'),
+    '#default_value' => variable_get('commerce_rbkmoney_company_name', 'Интересные принадлежности'),
+    '#description' => t("Company name in payment form"),
+    '#required' => TRUE,
+  ];
+
+  $form['commerce_rbkmoney_currency'] = [
+    '#type' => 'textfield',
+    '#title' => t('Payments currency'),
+    '#default_value' => variable_get('commerce_rbkmoney_currency', DEFAULT_CURRENCY),
+    '#description' => t("Please, select payments currency"),
+    '#required' => TRUE,
+  ];
+  $form['commerce_rbkmoney_log'] = [
+    '#type' => 'radios',
+    '#title' => t("Save " . COMPANY_NAME . "'s server responses in <a href='!dblog'>system log</a>",
+      ['!dblog' => url(BASE_URL . '/#overlay=admin/reports/dblog')]),
+    '#options' => [
+      1 => t('Yes'),
+      0 => t('No')
+    ],
+    '#default_value' => variable_get('commerce_rbkmoney_log', 1),
+  ];
+
+  return system_settings_form($form);
+}
+
+/*
+ * Payment method callback
+ */
+function commerce_rbkmoney_redirect_form($form, &$form_state, $order, $payment_method)
+{
+  if (empty($_SESSION['invoiceID'])) {
+    $response = create_invoice($order);
+    $json_encode = drupal_json_decode($response['body']);
+
+    if (empty($json_encode['id'])) {
+      drupal_set_message(t("Error create invoice"), 'error');
+      drupal_goto('cart');
+    }
+
+    $invoiceId = $json_encode['id'];
+
+    $_SESSION['invoiceID'] = $invoiceId;
+  } else {
+    $invoiceId = $_SESSION['invoiceID'];
+  }
+
+  $order_wrapper = entity_metadata_wrapper('commerce_order', $order);
+  $amount = $order_wrapper->commerce_order_total->amount->value();
+  $currency_code = $order_wrapper->commerce_order_total->currency_code->value();
+
+  $payFrame = '<script src="' . PATH_JS_PAYFRAME . '" class="rbkmoney-payform"
+              data-key="' . MERCHANT_CDS_TOKEN . '"
+              data-order-id="' . $order->order_id . '"
+              data-invoice-id="' . $invoiceId . '"
+              data-failed-url="' . BASE_URL . '/commerce/rbkmoney/fail?order_id=' . $order->order_id . '"
+              data-success-url="' . BASE_URL . '/commerce/rbkmoney/success?order_id=' . $order->order_id . '"
+              data-amount="' . number_format($amount) . '"
+              data-currency="' . $currency_code . '"
+              data-button-color="' . variable_get('commerce_rbkmoney_color_form') . '"
+              data-logo="' . variable_get('commerce_rbkmoney_path_logo') . '"
+              data-name="' . variable_get('commerce_rbkmoney_company_name') . '"
+              data-endpoint-init="' . PAYMENT_FORM_INIT_URL . '"
+              data-endpoint-events="' . PAYMENT_FORM_STATUS_URL . '">
+            </script>';
+
+  $form = [];
+  $text = '<div class="rbkmoney">' . $payFrame . '<br /></div>';
+  $form['info'] = ['#markup' => $text];
+
+  return $form;
+}
+
+/**
+ * Payment method callback: submit form.
+ */
+function commerce_rbkmoney_submit_form($payment_method, $pane_values, $checkout_pane, $order)
+{
+  $form = [];
+  $text = theme('image',
+    [
+      'path' => PATH_IMG_LOGO,
+      'alt' => t(COMPANY_NAME),
+      'title' => t(COMPANY_NAME),
+      'attributes' => ['class' => 'rbkmoney-logo']
+    ]
+  );
+  $text .= '<div class="rbkmoney">' . t('Pay with credit card') . '<br /></div>';
+  $form['info'] = ['#markup' => $text];
+
+  return $form;
+}
+
+/**
+ * Callback for RBKmoney system response.
+ */
+function commerce_rbkmoney_response()
+{
+  $response = [];
+
+  foreach ($_GET as $k => $v) {
+    $response[$k] = $v;
+  }
+
+  if (empty($response['order_id'])) {
+    throw new Exception("Not found required parameter order_id");
+  }
+
+  if (empty($response['status'])) {
+    throw new Exception("Not found required parameter status");
+  }
+
+  $order = commerce_order_load($response['order_id']);
+  $order_wrapper = entity_metadata_wrapper('commerce_order', $order);
+  $amount = $order_wrapper->commerce_order_total->amount->value();
+  $currency_code = $order_wrapper->commerce_order_total->currency_code->value();
+
+  switch ($response['status']) {
+
+    case RBKMONEY_STATUS_FAILED:
+      $transaction = commerce_payment_transaction_new(MODULE_NAME, $order->order_id);
+      $transaction->instance_id = $order->data['payment_method'];
+      $transaction->amount = $amount;
+      $transaction->currency_code = $currency_code;
+      $transaction->status = COMMERCE_PAYMENT_STATUS_FAILURE;
+      $transaction->message = t('Response from RBK Money: failure');
+      commerce_payment_transaction_save($transaction);
+      logger(MODULE_NAME, "status: {" . RBKMONEY_STATUS_FAILED . "}; data: <pre>%log</pre>", ['%log' => var_export($response, TRUE)]);
+      break;
+
+    case RBKMONEY_STATUS_SUCCESS:
+      $transaction = commerce_payment_transaction_new(MODULE_NAME, $order->order_id);
+      $transaction->instance_id = $order->data['payment_method'];
+      $transaction->amount = $amount;
+      $transaction->currency_code = $currency_code;
+      $transaction->status = COMMERCE_PAYMENT_STATUS_SUCCESS;
+      $transaction->message = t('Response from RBK Money: successful');
+      commerce_payment_transaction_save($transaction);
+      logger(MODULE_NAME, "status: {" . RBKMONEY_STATUS_SUCCESS . "}; data: <pre>%log</pre>", ['%log' => var_export($response, TRUE)]);
+      break;
+
+    default:
+      logger(MODULE_NAME, "Fail update status; data: <pre>%log</pre>", ['%log' => var_export($response, TRUE)]);
+  }
+
+}
+
+
+/**
+ * Callback redirect from RBKmoney site.
+ */
+function commerce_rbkmoney_payment_end($arg)
+{
+  if (!empty($_SESSION['invoiceID'])) unset($_SESSION['invoiceID']);
+  if (empty($_GET['order_id'])) $arg = 'fail';
+
+  switch ($arg) {
+    case "success":
+      drupal_goto('checkout/' . $_GET['order_id'] . '/complete');
+      break;
+
+    case "fail":
+      drupal_set_message(t("Your payment has been declined."), 'error');
+      drupal_goto('cart');
+      break;
+  }
+
+  return;
+}
+
+/**
+ * Create Invoice
+ *
+ * @param $order
+ * @return mixed
+ * @throws Exception
+ */
+function create_invoice($order)
+{
+  $order_wrapper = entity_metadata_wrapper('commerce_order', $order);
+  $amount = $order_wrapper->commerce_order_total->amount->value();
+  $currency_code = $order_wrapper->commerce_order_total->currency_code->value();
+  // Prepare invoice
+  date_default_timezone_set('UTC');
+  $data = [
+    'shopID' => variable_get('commerce_rbkmoney_shop_id'),
+    'amount' => $amount,
+    'context' => [
+      "cms" => 'drupal',
+      "cms_version" => VERSION,
+      "module" => MODULE_NAME,
+      "order_id" => $order->order_id,
+    ],
+    'dueDate' => date("Y-m-d\TH:i:s\Z", strtotime(CREATE_INVOICE_DUE_DATE)),
+    'currency' => $currency_code,
+    'product' => $order->order_id,
+    'description' => "",
+  ];
+
+  $headers = [];
+  $headers[] = 'X-Request-ID: ' . uniqid();
+  $headers[] = 'Authorization: Bearer ' . MERCHANT_TOKEN;
+  $headers[] = 'Content-type: application/json; charset=utf-8';
+  $headers[] = 'Accept: application/json';
+
+  // {"id":"1"}
+  $response = send(COMMON_API_URL . 'processing/invoices', 'POST', $headers, drupal_json_encode($data), 'init_invoice');
+
+  if ($response['http_code'] != 201) {
+    drupal_set_message(t("Error create invoice"), 'error');
+    drupal_goto('cart');
+  }
+
+  return $response;
+}
+
+function send($url = '', $method = 'POST', $headers = [], $data = '', $operation = '')
+{
+  $request = [
+    'url' => $url,
+    'method' => $method,
+    'body' => $data,
+    'headers' => $headers,
+  ];
+
+  if (!in_array($method, ['POST', 'GET'])) {
+    $logs = [
+      'request' => $request,
+      'method' => $method,
+    ];
+    logger(MODULE_NAME . '_' . $operation, "<pre>%logs</pre>", ['%logs' => var_export([$logs], TRUE)]);
+
+    throw new Exception("Unsupported method " . $method);
+  }
+
+  $curl = curl_init($url);
+
+  if ($method == 'POST') {
+    curl_setopt($curl, CURLOPT_POST, 1);
+    curl_setopt($curl, CURLOPT_POSTFIELDS, $data);
+  }
+
+  curl_setopt($curl, CURLOPT_SSL_VERIFYHOST, false);
+  curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, false);
+  curl_setopt($curl, CURLOPT_RETURNTRANSFER, 1);
+  curl_setopt($curl, CURLOPT_HTTPHEADER, $headers);
+
+  $body = curl_exec($curl);
+  $info = curl_getinfo($curl);
+
+  $curl_errno = curl_errno($curl);
+
+  $response['http_code'] = $info['http_code'];
+  $response['body'] = $body;
+  $response['error'] = $curl_errno;
+
+  $logs = [
+    'request' => $request,
+    'response' => $response,
+  ];
+
+  logger(MODULE_NAME . '_' . $operation, "<pre>%logs</pre>", ['%logs' => var_export($logs, TRUE)]);
+
+  curl_close($curl);
+
+  return $response;
+}
+
+function logger($type, $message, $variables = [])
+{
+  if (variable_get('commerce_rbkmoney_log')) {
+    watchdog($type, $message, $variables);
+  }
+}
