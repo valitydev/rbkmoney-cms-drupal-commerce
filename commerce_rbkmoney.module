@@ -108,7 +108,7 @@ function commerce_rbkmoney_config()
     $form['tab1']['commerce_rbkmoney_shop_id'] = [
         '#type' => 'textfield',
         '#title' => t('ID магазина'),
-        '#default_value' => variable_get('commerce_rbkmoney_shop_id', '1'),
+        '#default_value' => variable_get('commerce_rbkmoney_shop_id', 'Shop_ID'),
         '#description' => t(''),
         '#required' => TRUE,
     ];
@@ -145,14 +145,6 @@ function commerce_rbkmoney_config()
         '#collapsible' => TRUE,
         '#group' => 'vertical_tabs',
     );
-
-    $form['tab2']['commerce_rbkmoney_payform_path_logo'] = [
-        '#type' => 'textfield',
-        '#title' => t('URL логотипа для отображения на форме оплаты'),
-        '#default_value' => variable_get('commerce_rbkmoney_payform_path_logo', PAYMENT_FORM_PATH_IMG_LOGO),
-        '#description' => t(''),
-        '#required' => FALSE,
-    ];
 
     $form['tab2']['commerce_rbkmoney_payform_button_label'] = [
         '#type' => 'textfield',
@@ -214,7 +206,7 @@ function commerce_rbkmoney_config()
 
     $form['tab4']['docs_integrations'] = array(
         '#type' => 'item',
-        '#markup' => t(l('Документация по интеграции', 'https://rbkmoney.github.io/docs',
+        '#markup' => t(l('Документация по интеграции', 'https://developer.rbk.money/',
             ['attributes' =>
                 ['target' => '_blank']
             ])),
@@ -230,7 +222,7 @@ function commerce_rbkmoney_config()
 
     $form['tab4']['docs_checkout'] = array(
         '#type' => 'item',
-        '#markup' => t(l('Документация по кастомизации платежной формы', 'https://rbkmoney.github.io/docs/integrations/checkout/#html-api',
+        '#markup' => t(l('Документация по кастомизации платежной формы', 'https://developer.rbk.money/docs/payments/checkout/#html-api',
             ['attributes' =>
                 ['target' => '_blank']
             ])),
@@ -250,16 +242,16 @@ function commerce_rbkmoney_redirect_form($form, &$form_state, $order, $payment_m
         if (empty($_SESSION[API_INVOICE_ID])) {
             $response = _commerce_rbkmoney_create_invoice($order);
             $response_decode = drupal_json_decode($response['body']);
-            $invoice_id = !empty($response_decode['id']) ? $response_decode['id'] : '';
+            $invoice_id = !empty($response_decode['invoice']['id']) ? $response_decode['invoice']['id'] : '';
+            $access_token = !empty($response_decode['invoiceAccessToken']['payload']) ? $response_decode['invoiceAccessToken']['payload'] : '';
             $_SESSION[API_INVOICE_ID] = $invoice_id;
         } else {
             $invoice_id = $_SESSION[API_INVOICE_ID];
         }
 
-        $access_token = _commerce_rbkmoney_create_invoice_access_token($invoice_id);
+       
 
         $company_name = (!empty(variable_get('commerce_rbkmoney_payform_company_name'))) ? 'data-name="' . variable_get('commerce_rbkmoney_payform_company_name') . '"' : '';
-        $company_logo = (!empty(variable_get('commerce_rbkmoney_payform_path_logo'))) ? 'data-logo="' . variable_get('commerce_rbkmoney_payform_path_logo') . '"' : '';
         $button_label = (!empty(variable_get('commerce_rbkmoney_payform_button_label'))) ? 'data-label="' . variable_get('commerce_rbkmoney_payform_button_label') . '"' : '';
         $description = (!empty(variable_get('commerce_rbkmoney_payform_description'))) ? 'data-description="' . variable_get('commerce_rbkmoney_payform_description') . '"' : '';
 
@@ -269,7 +261,6 @@ function commerce_rbkmoney_redirect_form($form, &$form_state, $order, $payment_m
                       data-invoice-id="' . $invoice_id . '"
                       data-invoice-access-token="' . $access_token . '"
                       ' . $company_name . '
-                      ' . $company_logo . '
                       ' . $button_label . '
                       ' . $description . '
                       >
@@ -367,29 +358,14 @@ function commerce_rbkmoney_payment_end($arg)
     return;
 }
 
-function _commerce_rbkmoney_create_invoice_access_token($invoice_id)
-{
-    $url = _commerce_rbkmoney_prepare_api_url('processing/invoices/' . $invoice_id . '/access_tokens');
-    $headers = _commerce_rbkmoney_prepare_headers();
-    $response = _commerce_rbkmoney_send($url, $headers, '', 'access_tokens');
 
-    if ($response['http_code'] != HTTP_CODE_CREATED) {
-        drupal_set_message(t('An error occurred while creating Invoice Access Token'), 'error');
-        drupal_goto('cart');
-    }
-
-    $response_decode = drupal_json_decode($response['body']);
-    $access_token = !empty($response_decode['payload']) ? $response_decode['payload'] : '';
-
-    return $access_token;
-}
 
 function _commerce_rbkmoney_create_invoice($order)
 {
     $order_wrapper = entity_metadata_wrapper('commerce_order', $order);
 
     $data = [
-        'shopID' => (int)variable_get('commerce_rbkmoney_shop_id'),
+        'shopID' => variable_get('commerce_rbkmoney_shop_id'),
         'amount' => _commerce_rbkmoney_prepare_amount($order_wrapper),
         'metadata' => _commerce_rbkmoney_prepare_metadata($order),
         'dueDate' => _commerce_rbkmoney_prepare_due_date(),

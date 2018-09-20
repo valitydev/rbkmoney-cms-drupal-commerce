@@ -17,7 +17,7 @@ define('MODULE_BASE_PATH', base_path() . drupal_get_path('module', MODULE_NAME))
 /**
  * Api URL
  */
-define('API_URL', 'http://api.rbk.test:8080/v1/');
+define('API_URL', 'https://api.rbk.money/v2/');
 
 /**
  * Merchant settings
@@ -30,8 +30,8 @@ define('MERCHANT_CALLBACK_PUBLIC_KEY', trim(variable_get('commerce_rbkmoney_merc
  * Payment form
  */
 define('BASE_URL', $GLOBALS['base_url']);
-define('PAYMENT_FORM_URL', 'http://checkout.rbk.test:8080/checkout.js');
-define('PAYMENT_FORM_PATH_IMG_LOGO', BASE_URL . MODULE_BASE_PATH . '/images/logo_default.png');
+define('PAYMENT_FORM_URL', 'https://checkout.rbk.money/checkout.js');
+
 
 /**
  * Payment method logo
