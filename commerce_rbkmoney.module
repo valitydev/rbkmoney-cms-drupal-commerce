@@ -333,7 +333,6 @@ function _commerce_rbkmoney_update_status_order($order_id, $status)
  */
 function commerce_rbkmoney_payment_end($arg)
 {
-    if (!empty($_SESSION[API_INVOICE_ID])) unset($_SESSION[API_INVOICE_ID]);
     if (empty($_GET['order_id'])) $arg = 'fail';
 
     switch ($arg) {
