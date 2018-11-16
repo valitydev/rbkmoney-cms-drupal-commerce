@@ -239,18 +239,10 @@ function commerce_rbkmoney_redirect_form($form, &$form_state, $order, $payment_m
 {
     if ($order->order_id > 0 && $payment_method['method_id'] == MODULE_NAME) {
 
-        if (empty($_SESSION[API_INVOICE_ID])) {
-            $response = _commerce_rbkmoney_create_invoice($order);
-            $response_decode = drupal_json_decode($response['body']);
-            $invoice_id = !empty($response_decode['invoice']['id']) ? $response_decode['invoice']['id'] : '';
-            $access_token = !empty($response_decode['invoiceAccessToken']['payload']) ? $response_decode['invoiceAccessToken']['payload'] : '';
-            $_SESSION[API_INVOICE_ID] = $invoice_id;
-        } else {
-            $invoice_id = $_SESSION[API_INVOICE_ID];
-        }
-
-       
-
+        $response = _commerce_rbkmoney_create_invoice($order);
+        $response_decode = drupal_json_decode($response['body']);
+        $invoice_id = !empty($response_decode['invoice']['id']) ? $response_decode['invoice']['id'] : '';
+        $access_token = !empty($response_decode['invoiceAccessToken']['payload']) ? $response_decode['invoiceAccessToken']['payload'] : '';
         $company_name = (!empty(variable_get('commerce_rbkmoney_payform_company_name'))) ? 'data-name="' . variable_get('commerce_rbkmoney_payform_company_name') . '"' : '';
         $button_label = (!empty(variable_get('commerce_rbkmoney_payform_button_label'))) ? 'data-label="' . variable_get('commerce_rbkmoney_payform_button_label') . '"' : '';
         $description = (!empty(variable_get('commerce_rbkmoney_payform_description'))) ? 'data-description="' . variable_get('commerce_rbkmoney_payform_description') . '"' : '';
